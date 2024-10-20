@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en" >
+<head>
+  <meta charset="UTF-8">
+  <title>Bible App</title>
+  <link rel="icon" href="https://fav.farm/📜" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/normalize/5.0.0/normalize.min.css">
+<link rel="stylesheet" href="./style.css">
+
+</head>
+<body>
+<!-- partial:index.partial.html -->
+<!--
+
+-->
+
+<div id="container">
+  <article>
+    <button class="dismiss">
+      <ion-icon name="close-outline"></ion-icon>
+    </button>
+    <menu>
+      <label class="darkswitch" for="checkbox">
+        <input type="checkbox" id="checkbox" />
+        <div class="slider"></div>
+        <ion-icon name="sunny" class="sun"></ion-icon>
+      </label>
+    </menu>
+    <nav class="centerwrap" id="booknav">
+      <h1 id="book"></h1>
+      <ul id="bookselect"></ul>
+    </nav>
+    <nav class="centerwrap" id="chapternav">
+      <h2 id="chapter"></h2>
+      <ul id="chapterselect">
+      </ul>
+    </nav>
+    <p id="passage"></p>
+    <div style="text-align: center;">
+      <h2>KJV-ASV-BBE-WEB-YLT BIBLE SEARCH</h2>
+    <input style="border-radius: 25px;" type="text" id="searchInput">
+<button style="border-radius: 5px;" id="searchButton">Search</button>
+<div id="searchResults"></div>
+  </div>
+  </article>
+  
+</div>
+<script src="https://unpkg.com/ionicons@5.4.0/dist/ionicons.js"></script>
+<!-- partial -->
+  <script src='https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js'></script>
+  <script  src="./script.js"></script>
+  <script>
+    let bibles = {
+            kjv: null,
+            asv: null,
+            bbe: null,
+            web: null,
+            ylt: null
+        };
+
+        const translations = ['kjv', 'asv', 'bbe', 'web', 'ylt'];
+
+        translations.forEach(translation => {
+            fetch(`./t_${translation}.json`)
+                .then(response => response.json())
+                .then(data => {
+                    bibles[translation] = data.resultset.row;
+                    console.log(`${translation.toUpperCase()} Bible data loaded:`, bibles[translation].length, "verses");
+                })
+                .catch(error => console.error(`Error loading ${translation.toUpperCase()} JSON:`, error));
+        });
+
+        function getTranslationLabel(translation) {
+            const labels = {
+                kjv: '(KJV)',
+                asv: '(ASV)',
+                bbe: '(BBE)',
+                web: '(WEB)',
+                ylt: "(YLT)"
+            };
+            return labels[translation] || translation.toUpperCase();
+        }
+
+        function getBookName(bookNumber) {
+            const bookNames = [
+                "Genesis", "Exodus", "Leviticus", "Numbers", "Deuteronomy", "Joshua", "Judges", "Ruth", "1 Samuel", "2 Samuel",
+                "1 Kings", "2 Kings", "1 Chronicles", "2 Chronicles", "Ezra", "Nehemiah", "Esther", "Job", "Psalms", "Proverbs",
+                "Ecclesiastes", "Song of Solomon", "Isaiah", "Jeremiah", "Lamentations", "Ezekiel", "Daniel", "Hosea", "Joel", "Amos",
+                "Obadiah", "Jonah", "Micah", "Nahum", "Habakkuk", "Zephaniah", "Haggai", "Zechariah", "Malachi", "Matthew",
+                "Mark", "Luke", "John", "Acts", "Romans", "1 Corinthians", "2 Corinthians", "Galatians", "Ephesians", "Philippians",
+                "Colossians", "1 Thessalonians", "2 Thessalonians", "1 Timothy", "2 Timothy", "Titus", "Philemon", "Hebrews", "James", "1 Peter",
+                "2 Peter", "1 John", "2 John", "3 John", "Jude", "Revelation"
+            ];
+            return bookNames[bookNumber - 1] || `Book ${bookNumber}`;
+        }
+
+        function highlightSearchTerm(text, searchTerm) {
+            const regex = new RegExp(`(${searchTerm})`, 'gi');
+            return text.replace(regex, '<mark class="highlight">$1</mark>');
+        }
+
+        document.getElementById('searchButton').addEventListener('click', () => {
+            if (Object.values(bibles).some(bible => bible === null)) {
+                alert('Bible data is still loading, please wait.');
+                return;
+            }
+
+            const query = document.getElementById('searchInput').value.trim().toLowerCase();
+            const searchResults = document.getElementById('searchResults');
+            searchResults.innerHTML = '';  // Clear previous results
+
+            translations.forEach(translation => {
+                let resultsFound = 0;
+                const translationResults = document.createElement('div');
+                translationResults.classList.add('translation-results');
+                translationResults.innerHTML = `<h2>${getTranslationLabel(translation)} Search Results</h2>`;
+
+                if (!Array.isArray(bibles[translation])) {
+                    console.error(`Bible data for ${translation} is not an array:`, bibles[translation]);
+                    return;
+                }
+
+                bibles[translation].forEach(verse => {
+                    // Assuming the verse structure is [id, book, chapter, verseNum, text]
+                    const [id, book, chapter, verseNum, text] = verse.field;
+                    
+                    if (text.toLowerCase().includes(query)) {
+                        const highlightedVerse = highlightSearchTerm(text, query);
+                        translationResults.innerHTML += `
+                            <p>
+                                <strong>${getBookName(book)} ${chapter}:${verseNum}</strong>
+                                <span class="translation-label">${getTranslationLabel(translation)}</span> - 
+                                ${highlightedVerse}
+                            </p>`;
+                        resultsFound++;
+                    }
+                });
+
+                if (resultsFound === 0) {
+                    translationResults.innerHTML += `<p>No results found in ${getTranslationLabel(translation)}.</p>`;
+                } else {
+                    translationResults.innerHTML += `<p>Results found: ${resultsFound}</p>`;
+                }
+
+                searchResults.appendChild(translationResults);
+            });
+        });
+
+  </script>
+
+</body>
+</html>
